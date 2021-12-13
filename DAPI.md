@@ -91,7 +91,7 @@ station software)
     3. `2` _End Of Tx Bytes_: The value `0x17F0` must be sent at every end of transmission.
 5. Responses consist of
     1. `1` _repitition byte_: The repitition of the command.
-    2. `1` _response size byte_: A binary unsigned 8-bit value representing the number of
+    2. `4` _response size byte_: A binary unsigned 32-bit value representing the number of
     frames that are about to be sent by the SPU.
     3. `N` _Frame bytes_: Depending on the issued command, response Frame bytes will be transmitted
     here by the SPU. Contrary to request Frame bytes, multiple frames of the same type may be
@@ -115,8 +115,40 @@ single command.
 
 
 #### 1.2.1.3 DAPI data frame
-**NOT DEFINED YET**
-
+1. Due to the implementation of the DAPI, the corresponding frame size for the following command will be defined as:
+    - `0x01`: 512 Byte per Frame 
+    - `0xAA`: 0 Bytes per Frame
+2. Frame definition for command `0x01`:
+    - 512 byte will be transmitted, 8 measurements are stored in this frame (Page alignment on Page 74 of latest SED)
+        - Note: SED page 74 only showes the idea, the offsets are wrong calculated. 
+    - Page start marker and page counter at offset `0x00`
+        - Content:`0x0F`, 3 bytes page counter
+    - Offsets according to the base address of the page and the offset of the measurement, first measurement at `0x04`. 
+        - `0x00`: Timestamp value 
+        - `0x04`: STAMP 1 highest 32 bit 
+        - `0x08`: STAMP 1 lowest 32 bit 
+        - `0x0C`: STAMP 2 highest 32 bit 
+        - `0x10`: STAMP 2 lowest 32 bit 
+        - `0x14`: STAMP 3 highest 32 bit 
+        - `0x18`: STAMP 3 lowest 32 bit
+        - `0x1C`: STAMP 4 highest 32 bit 
+        - `0x20`: STAMP 4 lowest 32 bit
+        - `0x24`: STAMP 5 highest 32 bit 
+        - `0x28`: STAMP 5 lowest 32 bit 
+        - `0x2C`: STAMP 6 highest 32 bit 
+        - `0x30`: STAMP 6 lowest 32 bit 
+        - `0x34`: Status Register 1
+        - `0x38`: Status Register 2
+    - Correction of Page 74 of the SED 
+        - `0x00`: Page marker 
+        - `0x04`: Measurment 1
+        - `0x3C`: Measurment 2
+        - `0x78`: Measurment 3
+        - `0xF0`: Measurment 4
+        - `0x12C`: Measurment 5
+        - `0x168`: Measurment 6
+        - `0x1A4`: Measurment 7
+        - `0x1E0`: Measurment 8
 
 
 ## Example communications
