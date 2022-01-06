@@ -66,7 +66,7 @@ and the microcontroller subsystem
 
 ### 1.2 UART interface
 1. Full duplex UART link
-2. Baudrate 115200
+2. Baudrate 921600
 3. 1 stop bit
 4. No parity bit
 5. 8 bit words
@@ -80,11 +80,15 @@ station software)
 4. Requests consist of
     1. `1` _command byte_: Every request starts with one request byte.
         - `0x01`: Read recorded data and metadata
-        - `0x02`: Trigger ADC calibrations **NOT IMPLEMENTED YET**
-        - `0x03`: Read ADC calibration data **NOT IMPLEMENTED YET**
-        - `0x04`: Write ADC calibration data **NOT IMPLEMENTED YET**
-        - `0x05`: Read SPU configuration data **NOT IMPLEMENTED YET**
-        - `0x06`: Write SPU configuration data **NOT IMPLEMENTED YET**
+        - `0x02`: Read Until
+        - `0x03`: Trigger ADC calibrations **NOT IMPLEMENTED YET**
+        - `0x04`: Read ADC calibration data **NOT IMPLEMENTED YET**
+        - `0x05`: Write ADC calibration data **NOT IMPLEMENTED YET**
+        - `0x06`: Read SPU configuration data **NOT IMPLEMENTED YET**
+        - `0x07`: Write SPU configuration data **NOT IMPLEMENTED YET**
+        - `0x11`: Get highest page address 
+        - `0x13`: Test meta data writer
+        - `0x20`: Test Memory
         - `0xAA`: Clear on-board storage
     2. `N` _Frame bytes_: Depending on the issued command the associated frame must be sent next.
     If no frame is associated with the issued command, no Frame bytes shall be sent.
@@ -116,8 +120,10 @@ single command.
 
 #### 1.2.1.3 DAPI data frame
 1. Due to the implementation of the DAPI, the corresponding frame size for the following command will be defined as:
-    - `0x01`: 512 Byte per Frame 
-    - `0xAA`: 0 Bytes per Frame
+    - `0x01`: 512 Bytes per frame 
+    - `0x02`: 512 Bytes per frame
+    - `0x11`: 0 Bytes per frame 
+    - `0xAA`: 0 Bytes per frame
 2. Frame definition for command `0x01`:
     - 512 byte will be transmitted, 8 measurements are stored in this frame (Page alignment on Page 74 of latest SED)
         - Note: SED page 74 only showes the idea, the offsets are wrong calculated. 
@@ -149,7 +155,21 @@ single command.
         - `0x168`: Measurment 6
         - `0x1A4`: Measurment 7
         - `0x1E0`: Measurment 8
+    
 
 
 ## Example communications
+1. `0x02`: Read until 
+    - Transmit `1`byte: command byte
+    - Transmit `4` bytes, the number of pages to be read. 
+        - The number has to be an offset from page number 0x200 (start of data segement)
+        - The SPU will transmit 2 times the requested pages (due to the hardware memory segmentation)
+    - Transmit `2` bytes of 0x17F0 as end seqeuence. 
+2. `0x11`: Get higest page address
+    - Transmit `1` byte: command byte 
+    - Transmit `2` bytes: end of command 
+    - Answer will be `12` bytes
+        - 5th to 8th byte will be used transmit the page offset. 
+        - 5th byte: highest byte of the offset
+        - 8th byte: lowest byte of the offset
 **NOT DEFINED YET**
