@@ -13,7 +13,7 @@ these features:
 
 ## Protocol
 ### Technichal Interface:
-- 19200 BAUD, 8n1
+- 38400 BAUD, 8n1
 - 60 Bytes per frame 
 ### Frame definition
     typedef struct {
