@@ -1,10 +1,11 @@
 # Data And Programming Interface (DAPI)
-_Version 0.0.1_
+_Version 1.0.0_
 
 
 
 ## Description
-The DAPI is the interface between the groundstation software and the SPU on the ground.
+The DAPI is the interface between the groundstation software (GSS) and the signal
+processing unit (SPU) on the ground.  
 Its capabilites include:
 
 * Programming and debugging the microcontroller
@@ -12,8 +13,6 @@ Its capabilites include:
 * Reading out stored measurements and metadata
 * Clearing on-board storage
 * Configuring the SPU
-* Triggering ADC calibrations
-* Reading out ADC calibration data
 
 
 
@@ -28,16 +27,10 @@ Its capabilites include:
     |  |--------------------------------------|  |
     |  |         1.2: UART interface          |  |
     |  |  |--------------------------------|  |  |
-    |  |  |   1.2.1: DAPI command frames   |  |  |
-    |  |  |  |--------------------------|  |  |  |
-    |  |  |  | 1.2.1.1: DAPI prog frame |  |  |  |
-    |  |  |  |--------------------------|  |  |  |
-    |  |  |  |--------------------------|  |  |  |
-    |  |  |  | 1.2.1.2: DAPI cali frame |  |  |  |
-    |  |  |  |--------------------------|  |  |  |
-    |  |  |  |--------------------------|  |  |  |
-    |  |  |  | 1.2.1.3: DAPI data frame |  |  |  |
-    |  |  |  |--------------------------|  |  |  |
+    |  |  |      1.2.2: GICD Commands      |  |  |
+    |  |  |--------------------------------|  |  |
+    |  |  |--------------------------------|  |  |
+    |  |  |      1.2.3: SICD Commands      |  |  |
     |  |  |--------------------------------|  |  |
     |  |--------------------------------------|  |
     |--------------------------------------------|
@@ -65,65 +58,101 @@ and the microcontroller subsystem
 
 
 ### 1.2 UART interface
-1. Full duplex UART link
-2. Baudrate 921600
+1. Full duplex, asynchronous UART link
+2. Baudrate 115200
 3. 1 stop bit
-4. No parity bit
+4. Even parity bit
 5. 8 bit words
+6. CTS handshaking (Transmit only on CTS == LOW; Other handshaking lines are ignored)
+7. Integer values as Big Endianness
 
 
-### 1.2.1 DAPI command frames
-1. Communication is initiated by a _request_ issued by the host system (computer running the ground
-station software)
-2. Every request is answered by the SPU with a _response_
-3. The DAPI has a low execution priority in the SPU, so the time to the response is varying.
-4. Requests consist of
+### 1.2.1 DAPI communication overview
+1. Communication can be initiated by both, the SPU and the GSS and is generally stateless.
+2. Communication data sent by the GSS is labeled Groundstation initiated communication _GICD_,
+whilst data sent from the SPU is called _SICD_
+3. The DAPI has a low execution priority in the SPU, so response timings are varying.
+4. _GICD_ consist of
     1. `1` _command byte_: Every request starts with one request byte.
-        - `0x01`: Read recorded data and metadata
-        - `0x02`: Read Until
-        - `0x03`: Trigger ADC calibrations **NOT IMPLEMENTED YET**
-        - `0x04`: Read ADC calibration data **NOT IMPLEMENTED YET**
-        - `0x05`: Write ADC calibration data **NOT IMPLEMENTED YET**
-        - `0x06`: Read SPU configuration data **NOT IMPLEMENTED YET**
-        - `0x07`: Write SPU configuration data **NOT IMPLEMENTED YET**
-        - `0x11`: Get highest page address 
-        - `0x13`: Test meta data writer
-        - `0x20`: Test Memory
-        - `0xAA`: Clear on-board storage
-    2. `N` _Frame bytes_: Depending on the issued command the associated frame must be sent next.
-    If no frame is associated with the issued command, no Frame bytes shall be sent.
-    3. `2` _End Of Tx Bytes_: The value `0x17F0` must be sent at every end of transmission.
-5. Responses consist of
-    1. `1` _repitition byte_: The repitition of the command.
-    2. `4` _response size byte_: A binary unsigned 32-bit value representing the number of
-    frames that are about to be sent by the SPU.
-    3. `N` _Frame bytes_: Depending on the issued command, response Frame bytes will be transmitted
+        - `0x00`: Echo command
+        - `0x01`: Get device status **NOT IMPLEMENTED YET**
+        - `0x02`: Read recorded data and metadata **NOT IMPLEMENTED YET**
+        - `0x03`: Start Live Data acquisition
+        - `0x04`: Stop Live Data acquisition
+        - `0x05`: Read SPU configuration data **NOT IMPLEMENTED YET**
+        - `0x06`: Write SPU configuration data **NOT IMPLEMENTED YET**
+        - `0xAA`: Clear on-board storage **NOT IMPLEMENTED YET**
+    2. `N` _Content bytes_: Depending on the issued command the associated frame must be sent next.
+    If no content is associated with the issued command, no content bytes shall be sent. `N` must
+    not be greater than 61.
+    3. `1` _Content demarcation byte_: The value `0x17` must be sent next.
+    4. `8 - ((N+3) mod 8)` _Padding bytes_: The value `0x00` as many times as necessary to 
+    enforce the entire data transmission to be a multiple of 8 bytes long.
+    5. `1` _End Of Tx Byte_: The value `0xF0` must be sent at every end of transmission.
+5. _SICD_ consist of
+    1. `1` _command byte_: Every request starts with one request byte and is losely coupled
+    to the _GICD_ _command bytes_.
+        - `0x00`: Send string message
+        - `0x01`: Send device status **NOT IMPLEMENTED YET**
+        - `0x02`: Send recorded data and metadata **NOT IMPLEMENTED YET**
+        - `0x03`: Send Live Data acquisition **NOT IMPLEMENTED YET**
+        - `0x05`: Send SPU configuration data **NOT IMPLEMENTED YET**
+        - `0xAA`: Clear on-board storage finished **NOT IMPLEMENTED YET**
+    2. `N` _Content bytes_: Depending on the issued command, response Frame bytes will be transmitted
     here by the SPU. Contrary to request Frame bytes, multiple frames of the same type may be
     transmitted here.
-    4. `1` _Success byte_: `0x0F` if operation succeeded, `0xF0` otherwise.
-    5. `2` _End Of Tx Bytes_: The value `0x17F0` must be received at every end of response.
-6. DO NOT SEND ANOTHER REQUEST, BEFORE THE PREVIOUSLY ISSUED COMMAND HAS BEEN ANSWERED BY THE SPU.
-Failure to comply with this rule may result in buffer overflows, highly likely in deadlocks or
-some other sort of undefined behavior. Therefore never send more than 64 bytes between as a
-single command.
+    3. `1` _Success byte_: `0x0F` if operation succeeded, `0xF0` otherwise.
+    4. `2` _End Of Tx Bytes_: The value `0x17F0` must be received at every end of response.
 
 
-#### 1.2.1.1 DAPI prog frame
-**NOT DEFINED YET**
+### 1.2.2 GICD commands
+
+#### 1.2.2.1 `0x00`: Echo Command
+Echo a string message back to the GSS. The _content bytes_ are defined as:
+1. Maximally 60 bytes of ASCII encoded string.
+2. 1 Byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors
+
+#### 1.2.2.4 `0x03`: Start Live Data acquisition
+Enables the live data acqusition mode of the SPU. After issuing this command expect
+a string message and live data acquisition frames with a frequency of 2Hz from the SPU.
+This command has no _command bytes_.
+
+#### 1.2.2.5 `0x04`: Stop Live Data acquisition
+Disables the live data acqusition mode of the SPU. After issuing this command expect
+a string message. This command has no _command bytes_.
 
 
+### 1.2.3 SICD commands
 
-#### 1.2.1.2 DAPI cali frame
-**NOT DEFINED YET**
+#### 1.2.3.1 `0x00`: Send String Message
+Sends an info, warning or error message to the Groundstation Software. These will not be queued until
+a GSS connected to the DAPI, but in timewise close proximity to the triggering event.
+The _success byte_ always indicates a successfull operation. The _content bytes_ are defined as:
+1. Any amount of printable ASCII characters
+2. 1 Byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors
 
+#### 1.2.3.4 `0x03`: Send Live Data acquisition
+Sends a recently captures datapackage containing all measurement values from all ADCs and all STAMPs.
+The _success byte_ always indicates a successfull operation.
+The _command bytes_ are defined as:
+1. 1 byte indicating the number of dataframes
+2. 8 bytes timestamp for first dataframe reading in fractions of 250us since start of data acquisition.
+3. For every dataframe:
+    1. 1 byte Stamp ID labeled 0 through 5. Note that the order appears random.
+    2. 1 byte error bitfield:
+        - `0x01` AdcLagging: The strain gauge rosette ADCs of this STAMP were not in sync with each other.
+        - `0x02` StampLagging: This STAMP was not in sync with the other STAMPs.
+        - `0x04` NoNew: No new value was received for this ADC. Not that this is normal for most temperature
+        readings.
+        - `0x08` Overwritten: The microcontroller could not read the measurements before they were overwritten.
+    3. 2 byte SGR1 measurement value as 16 bit signed integer.
+    4. 2 byte SGR2 measurement value as 16 bit signed integer.
+    5. 2 byte RTD measurement value as 16 bit signed integer.
 
-
-#### 1.2.1.3 DAPI data frame
+#### 1.2.3.3 DAPI data frame
 1. Due to the implementation of the DAPI, the corresponding frame size for the following command will be defined as:
-    - `0x01`: 512 Bytes per frame 
-    - `0x02`: 512 Bytes per frame
-    - `0x11`: 0 Bytes per frame 
-    - `0xAA`: 0 Bytes per frame
+    - `0x01`: 512 Byte per Frame 
+    - `0xAA`: 0 Bytes per Frame
 2. Frame definition for command `0x01`:
     - 512 byte will be transmitted, 8 measurements are stored in this frame (Page alignment on Page 74 of latest SED)
         - Note: SED page 74 only showes the idea, the offsets are wrong calculated. 
@@ -155,21 +184,7 @@ single command.
         - `0x168`: Measurment 6
         - `0x1A4`: Measurment 7
         - `0x1E0`: Measurment 8
-    
 
 
 ## Example communications
-1. `0x02`: Read until 
-    - Transmit `1`byte: command byte
-    - Transmit `4` bytes, the number of pages to be read. 
-        - The number has to be an offset from page number 0x200 (start of data segement)
-        - The SPU will transmit 2 times the requested pages (due to the hardware memory segmentation)
-    - Transmit `2` bytes of 0x17F0 as end seqeuence. 
-2. `0x11`: Get higest page address
-    - Transmit `1` byte: command byte 
-    - Transmit `2` bytes: end of command 
-    - Answer will be `12` bytes
-        - 5th to 8th byte will be used transmit the page offset. 
-        - 5th byte: highest byte of the offset
-        - 8th byte: lowest byte of the offset
 **NOT DEFINED YET**
