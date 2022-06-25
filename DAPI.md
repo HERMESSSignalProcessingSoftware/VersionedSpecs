@@ -1,5 +1,5 @@
 # Data And Programming Interface (DAPI)
-_Version 1.0.0_
+_Version 1.1.0_
 
 
 
@@ -79,8 +79,8 @@ whilst data sent from the SPU is called _SICD_
         - `0x02`: Read recorded data and metadata **NOT IMPLEMENTED YET**
         - `0x03`: Start Live Data acquisition
         - `0x04`: Stop Live Data acquisition
-        - `0x05`: Read SPU configuration data **NOT IMPLEMENTED YET**
-        - `0x06`: Write SPU configuration data **NOT IMPLEMENTED YET**
+        - `0x05`: Read SPU configuration data
+        - `0x06`: Write SPU configuration data
         - `0xAA`: Clear on-board storage **NOT IMPLEMENTED YET**
     2. `N` _Content bytes_: Depending on the issued command the associated frame must be sent next.
     If no content is associated with the issued command, no content bytes shall be sent. `N` must
@@ -95,9 +95,9 @@ whilst data sent from the SPU is called _SICD_
         - `0x00`: Send string message
         - `0x01`: Send device status **NOT IMPLEMENTED YET**
         - `0x02`: Send recorded data and metadata **NOT IMPLEMENTED YET**
-        - `0x03`: Send Live Data acquisition **NOT IMPLEMENTED YET**
-        - `0x05`: Send SPU configuration data **NOT IMPLEMENTED YET**
-        - `0xAA`: Clear on-board storage finished **NOT IMPLEMENTED YET**
+        - `0x03`: Send Live Data acquisition
+        - `0x05`: Send SPU configuration data
+        - `0xAA`: Clear on-board storage status **NOT IMPLEMENTED YET**
     2. `N` _Content bytes_: Depending on the issued command, response Frame bytes will be transmitted
     here by the SPU. Contrary to request Frame bytes, multiple frames of the same type may be
     transmitted here.
@@ -115,11 +115,38 @@ Echo a string message back to the GSS. The _content bytes_ are defined as:
 #### 1.2.2.4 `0x03`: Start Live Data acquisition
 Enables the live data acqusition mode of the SPU. After issuing this command expect
 a string message and live data acquisition frames with a frequency of 2Hz from the SPU.
-This command has no _command bytes_.
+This command has no _content bytes_.
 
 #### 1.2.2.5 `0x04`: Stop Live Data acquisition
 Disables the live data acqusition mode of the SPU. After issuing this command expect
-a string message. This command has no _command bytes_.
+a string message. This command has no _content bytes_.
+
+#### 1.2.2.6 `0x05`: Read SPU configuration data
+Reads the EEPROM configuration of the SPU. After issuing this command expect
+a Send SPU configuration data. This command has no _content bytes_.
+
+#### 1.2.2.7 `0x06`: Write SPU configuration data
+Writes the SPUs EEPROM configuration. For the configuration to take effect, you must restart the SPU.
+Expect a string message back from the GSS. For runtime effiency, the _content bytes_ will not be
+sanity checked the by SPU. The _content bytes_ are
+1. 16 bytes printable ASCII encoded string for the name name designator. Shorter names are left aligned
+and padded with nulls. At least the first character must not be null.
+2. 1 Initilization information byte:
+    - Bit 7 (MSB): 1 = Initiate SGR ADC with self offset calibration
+    - Bit 6: 1 = Initiate SGR ADC with system offset calibration. Should not be set, when Bit 8 is set.
+    - Bit 5: 1 = Initiate RTD ADC with self offset calibration
+    - Bit 4: 1 = Initiate RTD ADC with system offset calibration. Should not be set, when Bit 8 is set.
+    - Bit 3: Always 0
+    - Bit 2: 1 = Enable storage of measurements on SODS signal asserted
+    - Bit 1: 1 = Enable clear measurements storage on SOE signal asserted
+    - Bit 0 (LSB): 1 = Enable the use of the telemetry system
+3. 1 Sgr mode information byte: Contents of the SYS0 register of the SGR ADCs as of the ADS114x
+datasheet chapter 9.6.4.4.
+4. 1 Rtd mode information byte: Contents of the SYS0 register of the RTD ADCs as of the ADS114x
+datasheet chapter 9.6.4.4.
+5. 8 bytes minimum data storage time after SODS trigger in 250us increments.
+6. 8 bytes maximum data storage time after SODS trigger in 250us increments. Must be greater than the previous value.
+
 
 
 ### 1.2.3 SICD commands
@@ -134,7 +161,7 @@ The _success byte_ always indicates a successfull operation. The _content bytes_
 #### 1.2.3.4 `0x03`: Send Live Data acquisition
 Sends a recently captures datapackage containing all measurement values from all ADCs and all STAMPs.
 The _success byte_ always indicates a successfull operation.
-The _command bytes_ are defined as:
+The _Content bytes_ are defined as:
 1. 1 byte indicating the number of dataframes
 2. 8 bytes timestamp for first dataframe reading in fractions of 250us since start of data acquisition.
 3. For every dataframe:
@@ -148,6 +175,10 @@ The _command bytes_ are defined as:
     3. 2 byte SGR1 measurement value as 16 bit signed integer.
     4. 2 byte SGR2 measurement value as 16 bit signed integer.
     5. 2 byte RTD measurement value as 16 bit signed integer.
+    
+#### 1.2.3.5 `0x05`: Send SPU configuration data
+Reads the EEPROM configuration of the SPU and sends it to the GSS. The _success byte_ always indicates a
+successfull operation. The _content bytes_ are identical to the ones used to write the SPU configuration data.
 
 #### 1.2.3.3 DAPI data frame
 1. Due to the implementation of the DAPI, the corresponding frame size for the following command will be defined as:
