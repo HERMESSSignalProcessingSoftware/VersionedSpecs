@@ -1,5 +1,5 @@
 # Data And Programming Interface (DAPI)
-_Version 1.1.0_
+_Version 1.1.1_
 
 
 
@@ -16,7 +16,7 @@ Its capabilites include:
 
 
 
-## Specifications
+## Overview of DAPI specifications
     |--------------------------------------------|
     |              1: USB interface              |
     |                                            |
@@ -39,7 +39,7 @@ Its capabilites include:
 
 
 ### 1: USB interface
-1. Physical connection via USB Type B socket on the SPU (USB Type B Plug required for
+1. Physical connection via mini USB socket on the SPU (mini USB Plug required for
 connection)
 2. Fullspeed USB 2.0 conform
 3. USB Vendor ID: `1514`  
@@ -59,12 +59,12 @@ and the microcontroller subsystem
 
 ### 1.2 UART interface
 1. Full duplex, asynchronous UART link
-2. Baudrate 115200
+2. Baudrate 115200 bit/s
 3. 1 stop bit
 4. Even parity bit
 5. 8 bit words
 6. CTS handshaking (Transmit only on CTS == LOW; Other handshaking lines are ignored)
-7. Integer values as Big Endianness
+7. Integer values big endian encoded
 
 
 ### 1.2.1 DAPI communication overview
@@ -179,43 +179,3 @@ The _Content bytes_ are defined as:
 #### 1.2.3.5 `0x05`: Send SPU configuration data
 Reads the EEPROM configuration of the SPU and sends it to the GSS. The _success byte_ always indicates a
 successfull operation. The _content bytes_ are identical to the ones used to write the SPU configuration data.
-
-#### 1.2.3.3 DAPI data frame
-1. Due to the implementation of the DAPI, the corresponding frame size for the following command will be defined as:
-    - `0x01`: 512 Byte per Frame 
-    - `0xAA`: 0 Bytes per Frame
-2. Frame definition for command `0x01`:
-    - 512 byte will be transmitted, 8 measurements are stored in this frame (Page alignment on Page 74 of latest SED)
-        - Note: SED page 74 only showes the idea, the offsets are wrong calculated. 
-    - Page start marker and page counter at offset `0x00`
-        - Content:`0x0F`, 3 bytes page counter
-    - Offsets according to the base address of the page and the offset of the measurement, first measurement at `0x04`. 
-        - `0x00`: Timestamp value 
-        - `0x04`: STAMP 1 highest 32 bit 
-        - `0x08`: STAMP 1 lowest 32 bit 
-        - `0x0C`: STAMP 2 highest 32 bit 
-        - `0x10`: STAMP 2 lowest 32 bit 
-        - `0x14`: STAMP 3 highest 32 bit 
-        - `0x18`: STAMP 3 lowest 32 bit
-        - `0x1C`: STAMP 4 highest 32 bit 
-        - `0x20`: STAMP 4 lowest 32 bit
-        - `0x24`: STAMP 5 highest 32 bit 
-        - `0x28`: STAMP 5 lowest 32 bit 
-        - `0x2C`: STAMP 6 highest 32 bit 
-        - `0x30`: STAMP 6 lowest 32 bit 
-        - `0x34`: Status Register 1
-        - `0x38`: Status Register 2
-    - Correction of Page 74 of the SED 
-        - `0x00`: Page marker 
-        - `0x04`: Measurment 1
-        - `0x3C`: Measurment 2
-        - `0x78`: Measurment 3
-        - `0xF0`: Measurment 4
-        - `0x12C`: Measurment 5
-        - `0x168`: Measurment 6
-        - `0x1A4`: Measurment 7
-        - `0x1E0`: Measurment 8
-
-
-## Example communications
-**NOT DEFINED YET**
