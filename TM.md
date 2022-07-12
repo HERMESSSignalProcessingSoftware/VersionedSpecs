@@ -1,5 +1,5 @@
 # HERMESS Telemetry protocol (TM)
-_Version 1.0.0_
+_Version 2.0.0_
 
 
 
@@ -27,7 +27,7 @@ The UART interface has these parameters:
 
 1. Simplex, receive only, asynchronous UART link
 2. Baudrate 38400 bit/s
-3. 1 Start and 1 Stop bit
+3. 1 Stop bit
 4. No parity bit
 5. 8 bit words
 6. No handshaking
@@ -41,51 +41,55 @@ is transmitted twice a second regardless of the current SPUs state, unless the T
 configuration.
 
     +------+------+------+------+------+------+------+------+------+------+------+
-    | SYN0 | SYN1 | FRID | STA0 | STA1 | PTST | TE00 | .... | TE55 | CSM0 | CSM1 |
+    | FRID | STA0 | STA1 | PTST | TE00 | .... | TE55 | CRC0 | CRC1 | SYN0 | SYN1 |
     +------+------+------+------+------+------+------+------+------+------+------+
-    B: 00     01     02     03     04     05     06    ....    61     62     63
+    B: 00     01     02     03     04    ....    59     60     61     62     63
     
                           FIG 1: HERMESS TM dataframe
 
 
-### `00 SYN0` to `01 SYN1`: Synchronization bytes
-The value `0x17F0` is always sent as a demarcation bit sequence.
-
-
-### `02 FRID`: Frame ID
+### `00 FRID`: Frame ID
 An unsigned value starting with 0 at system start or reset and increment with each transmitted HERMESS TM dataframe
 and wraps around when reaching its maximum value of 255.
 
 
-### `03 STA0` to `04 STA1`: SPU state
+### `01 STA0` to `02 STA1`: SPU state
 1. Bit 15 (MSB in `STA0`): 1 = Restart after Watchdog Trigger
 2. Bit 14: 1 = LO asserted
 3. Bit 13: 1 = SOE asserted
-4. Bit 12: 1 = SODS asserted and currently recording data
-5. Bit 11: 1 = Write protection asserted
-6. Bit 10: 1 = Flash storage was cleared before SODS was asserted
-7. Bits 9 to 1: **NOT YET DEFINED**
-8. Bit 0 (LSB in STA1): First byte of PTST
+4. Bit 12: 1 = SODS asserted
+5. Bit 11: 1 = Currently clearing memory
+6. Bit 10: 1 = Currently recording data
+7. Bit 9: 1 = Write protection asserted
+8. Bit 8: 1 = Flash storage was cleared before SODS was asserted
+9. Bits 7 to 1: **NOT YET DEFINED**
+10. Bit 0 (LSB in STA1): 1 = Sending first byte of PTST
 
 
-### `05 PTST`: Partial timestamp
+### `03 PTST`: Partial timestamp
+The value is the SPU internal timestamp in fractions of 250us since start of data acquisition. 
+
 The system timestamp is 8 bytes long and only one byte is being sent with each transmission, beginning with the
 most significant byte in a big endianess style. When the most significant byte is being sent, bit 0 in STA1 is set
 to 1 and is 0 for all other transmissions. To assemble the current timestamp, a ground station software must
 therefore collect 8 consecutive HERMESS TM dataframes, beginning with a frame having the LSB in STA1 set to 1.
 
 
-### `06 TE00` to `61 TE55`: Text message
+### `04 TE00` to `59 TE55`: Text message
 Sends an info, warning or error message to the Groundstation Software. Messages may be spread over several HERMESS TM
-dataframes. No more than one messsage can be transmitted via a single HERMESS TM dataframe.
+dataframes. No more than one messsage can be transmitted via a single HERMESS TM dataframe. If a message has a multiple
+of 56 as a length, the following HERMESS TM dataframe text message bytes will be all null.
 1. Up to 56 bytes of printable ASCII characters
-2. 1 byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors
-3. Null padding, if message finished or no new messages queued
+2. 1 byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors. These terms are defined in the DAPI spec.
+3. Null padding, if message finished or no new messages queued.
 
 
-### `62 CSM0` to `63 CSM1`: Checksum
-A simple numeric, unsigned 16-bit, big endianess sum of the previous 31 16-bit pairs of this dataframe with bytewise
-independend value wrap around.
+### `60 CRC0` to `61 CRC1`: Cyclic redundancy checksum
+A CRC 16 CCIT FALSE checksum as big engianness value. The CRC is only calculated based on the bytes `00` to `59`.
+
+
+### `62 SYN0` to `63 SYN1`: Synchronization bytes
+The value `0x17F0` is always sent as a demarcation bit sequence.
 
 
 

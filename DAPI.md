@@ -1,5 +1,5 @@
 # Data And Programming Interface (DAPI)
-_Version 1.1.1_
+_Version 1.1.2_
 
 
 
@@ -110,7 +110,11 @@ whilst data sent from the SPU is called _SICD_
 #### 1.2.2.1 `0x00`: Echo Command
 Echo a string message back to the GSS. The _content bytes_ are defined as:
 1. Maximally 60 bytes of ASCII encoded string.
-2. 1 Byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors
+2. 1 Byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors. Info messages are sent,
+whenever the SPU reached and successfully ran a critical execution point. Warnings are triggered
+by events, in which the SPU detected a non-normal state of one of its subsystem not immediately
+leading to a significant degradation of system performance. Errors are events, in
+which the SPU detected a serious defect in its state resulting in a significant loss of data.
 
 #### 1.2.2.4 `0x03`: Start Live Data acquisition
 Enables the live data acqusition mode of the SPU. After issuing this command expect
