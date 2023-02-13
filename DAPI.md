@@ -1,5 +1,5 @@
 # Data And Programming Interface (DAPI)
-_Version 1.1.2_
+_Version 1.2.0_
 
 
 
@@ -76,7 +76,7 @@ whilst data sent from the SPU is called _SICD_
     1. `1` _command byte_: Every request starts with one request byte.
         - `0x00`: Echo command
         - `0x01`: Get device status **NOT IMPLEMENTED YET**
-        - `0x02`: Read recorded data and metadata **NOT IMPLEMENTED YET**
+        - `0x02`: Read recorded data and metadata
         - `0x03`: Start Live Data acquisition
         - `0x04`: Stop Live Data acquisition
         - `0x05`: Read SPU configuration data
@@ -94,7 +94,7 @@ whilst data sent from the SPU is called _SICD_
     to the _GICD_ _command bytes_.
         - `0x00`: Send string message
         - `0x01`: Send device status **NOT IMPLEMENTED YET**
-        - `0x02`: Send recorded data and metadata **NOT IMPLEMENTED YET**
+        - `0x02`: Send recorded data and metadata
         - `0x03`: Send Live Data acquisition
         - `0x05`: Send SPU configuration data
         - `0xAA`: Clear on-board storage status **NOT IMPLEMENTED YET**
@@ -115,6 +115,9 @@ whenever the SPU reached and successfully ran a critical execution point. Warnin
 by events, in which the SPU detected a non-normal state of one of its subsystem not immediately
 leading to a significant degradation of system performance. Errors are events, in
 which the SPU detected a serious defect in its state resulting in a significant loss of data.
+
+#### 1.2.2.3 `0x02`: Read recorded data and metadata
+Reads out all recorded measurement data by making the SPU send the data with its specific SICD command.
 
 #### 1.2.2.4 `0x03`: Start Live Data acquisition
 Enables the live data acqusition mode of the SPU. After issuing this command expect
@@ -161,6 +164,14 @@ a GSS connected to the DAPI, but in timewise close proximity to the triggering e
 The _success byte_ always indicates a successfull operation. The _content bytes_ are defined as:
 1. Any amount of printable ASCII characters
 2. 1 Byte ASCII `'0'` for infos, `'1'` for warnings, `'2'` for errors
+
+#### 1.2.3.3 `0x02`: Send recorded data and metadata
+1. 2 bytes indicating the total number of pages to be transmitted
+2. 2 bytes indicating the current page number to be transmitted
+3. 9 times page content consisting of appended datapackages:
+    1. 1 Byte number of `n` received dataframes
+    2. 8 bytes timestamp
+    3. `n` times dataframes according to chapter 1.2.3.4 point 3.
 
 #### 1.2.3.4 `0x03`: Send Live Data acquisition
 Sends a recently captures datapackage containing all measurement values from all ADCs and all STAMPs.
