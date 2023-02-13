@@ -1,5 +1,5 @@
 # HERMESS Telemetry protocol (TM)
-_Version 2.0.0_
+_Version 3.0.0_
 
 
 
@@ -40,10 +40,10 @@ All HERMESS TM dataframes are exactly 64 bytes long to prevent buffer overflows 
 is transmitted twice a second regardless of the current SPUs state, unless the TM feature is specifically disabled by
 configuration.
 
-    +------+------+------+------+------+------+------+------+------+------+------+
-    | FRID | STA0 | STA1 | PTST | TE00 | .... | TE55 | CRC0 | CRC1 | SYN0 | SYN1 |
-    +------+------+------+------+------+------+------+------+------+------+------+
-    B: 00     01     02     03     04    ....    59     60     61     62     63
+    +------+------+------+------+------+------+------+------+------+------+------+------+------+
+    | FRID | STA0 | STA1 | PTST | MS01 | MS02 | TE00 | .... | TE55 | CRC0 | CRC1 | SYN0 | SYN1 |
+    +------+------+------+------+------+------+------+------+------+------+------+------+------+
+    B: 00     01     02     03     04     05     06    ....    59     60     61     62     63
     
                           FIG 1: HERMESS TM dataframe
 
@@ -70,12 +70,17 @@ and wraps around when reaching its maximum value of 255.
 The value is the SPU internal timestamp in fractions of 250us since start of data acquisition. 
 
 The system timestamp is 8 bytes long and only one byte is being sent with each transmission, beginning with the
-most significant byte in a big endianess style. When the most significant byte is being sent, bit 0 in STA1 is set
+most significant byte in a big endianness style. When the most significant byte is being sent, bit 0 in STA1 is set
 to 1 and is 0 for all other transmissions. To assemble the current timestamp, a ground station software must
 therefore collect 8 consecutive HERMESS TM dataframes, beginning with a frame having the LSB in STA1 set to 1.
 
 
-### `04 TE00` to `59 TE55`: Text message
+### `04 MS01` to `05 MS02`: Memory Status
+Sends information regarding the memory status directly from the flash storage device S25FL5125S.
+1. 8 Bytes status register 1 (SR1) according to datasheet flash storage device
+
+
+### `06 TE00` to `59 TE55`: Text message
 Sends an info, warning or error message to the Groundstation Software. Messages may be spread over several HERMESS TM
 dataframes. No more than one messsage can be transmitted via a single HERMESS TM dataframe. If a message has a multiple
 of 56 as a length, the following HERMESS TM dataframe text message bytes will be all null.
