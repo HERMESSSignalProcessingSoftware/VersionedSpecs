@@ -81,6 +81,7 @@ whilst data sent from the SPU is called _SICD_
         - `0x04`: Stop Live Data acquisition
         - `0x05`: Read SPU configuration data
         - `0x06`: Write SPU configuration data
+        - `0x07`: Read memory (complet dump)
         - `0xAA`: Clear on-board storage **NOT IMPLEMENTED YET**
     2. `N` _Content bytes_: Depending on the issued command the associated frame must be sent next.
     If no content is associated with the issued command, no content bytes shall be sent. `N` must
