@@ -98,6 +98,7 @@ whilst data sent from the SPU is called _SICD_
         - `0x02`: Send recorded data and metadata
         - `0x03`: Send Live Data acquisition
         - `0x05`: Send SPU configuration data
+        - `0x07`: Send complete Memory 
         - `0xAA`: Clear on-board storage status **NOT IMPLEMENTED YET**
     2. `N` _Content bytes_: Depending on the issued command, response Frame bytes will be transmitted
     here by the SPU. Contrary to request Frame bytes, multiple frames of the same type may be
@@ -117,8 +118,17 @@ by events, in which the SPU detected a non-normal state of one of its subsystem 
 leading to a significant degradation of system performance. Errors are events, in
 which the SPU detected a serious defect in its state resulting in a significant loss of data.
 
-#### 1.2.2.3 `0x02`: Read recorded data and metadata
+#### 1.2.2.3 `0x02`: Read recorded data
 Reads out all recorded measurement data by making the SPU send the data with its specific SICD command.
+Sends data in format of the datapackage defined in datapackage.h.
+The send frame of the SPU looks like:
+    - 1 command repeat byte 
+    - 3 bytes of the current read page
+    - 3 bytes of the total number of pages to read
+    - 1 byte data frame per page indicator number with limits 0 .. 8 for normal data frames. 0xff if the dataframe is not fully loaded. In case 0xff the SPU will transmit only 8 bytes of memory content.
+    - 56 bytes of content
+    - 1 success byte
+    - 2 bytes demarcation 
 
 #### 1.2.2.4 `0x03`: Start Live Data acquisition
 Enables the live data acqusition mode of the SPU. After issuing this command expect
@@ -155,7 +165,17 @@ datasheet chapter 9.6.4.4.
 5. 8 bytes minimum data storage time after SODS trigger in 250us increments.
 6. 8 bytes maximum data storage time after SODS trigger in 250us increments. Must be greater than the previous value.
 
-
+#### 1.2.2.8 `0x07`: Read all data
+Reads out all data by making the SPU send the data with iths SICD command. 
+Sends the data in format of the datapackage defined in datapackage.h.  
+The send frame of the SPU looks like:
+    - 1 command repeat byte 
+    - 3 bytes of the current read page
+    - 3 bytes of the total number of pages to read
+    - 1 byte data frame per page indicator number with limits 0 .. 8 for normal data frames. 0xff if the dataframe is not fully loaded. In case 0xff the SPU will transmit only 8 bytes of memory content.
+    - 56 bytes of content
+    - 1 success byte
+    - 2 bytes demarcation 
 
 ### 1.2.3 SICD commands
 
